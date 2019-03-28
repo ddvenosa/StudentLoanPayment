@@ -1,0 +1,52 @@
+function [number_of_months, total_interest] = funcLoans(monthly_payment, filename)
+
+% define some variables
+loandetails = importfile(filename);
+loan = struct;
+loan.name = table2array(loandetails(:,1)); 
+loan.type = table2array(loandetails(:,2)); 
+loan.amount = table2array(loandetails(:,3)); 
+loan.interest_rate = table2array(loandetails(:,4)); 
+
+% default assumes today is day 1 of loans
+totalsum = sum([loan(:).amount]);
+number_of_months = 1; 
+total_interest = 0; 
+
+% find order of loans from highest interest rate to lowest 
+[~, order] = sort([loan.interest_rate], 'descend'); 
+
+% pay off one loan at a time depending on previous order ^
+for o = 1:length(order) 
+     while loan.amount(order(o)) > 0 
+         % calculate how much interest + loans accumulate at end of month
+         for i = 1:length([loan.amount])
+             loan.amount(i) = loan.amount(i) .* loan.interest_rate(i) ./ 12 + loan.amount(i); 
+             total_interest = total_interest + loan.amount(i) .* loan.interest_rate(i) ./ 12; 
+         end
+         % subtract payment from the total loans + interest starting at one
+         % loan at a time 
+         loan.amount(order(o)) = loan.amount(order(o)) - monthly_payment; 
+         % in case monthly payment >> loan amount, move next payment to the
+         % next highest interest loan and so on 
+         index = o;
+         while (loan.amount(order(index)) < 0) && (order(index) ~= order(end))
+              payment2 = -loan.amount(order(index)); % move payment
+              loan.amount(order(index)) = 0; % make previous loan amount 0 
+              index = index + 1; 
+              loan.amount(order(index)) = loan.amount(order(index)) - payment2; 
+         end
+         totalsum = sum([loan.amount]); 
+         number_of_months = number_of_months + 1; 
+         figure(1)
+         plot(number_of_months, totalsum, 'kd')
+         hold on
+         plot(number_of_months, total_interest, 'rd')
+         xlabel('elapsed months')
+         ylabel('money owed')
+     end 
+end
+disp(['months = ', num2str(number_of_months)])
+disp(['years = ', num2str(number_of_months/12)])
+disp(['estimated interest = ', num2str(total_interest)]) 
+end
